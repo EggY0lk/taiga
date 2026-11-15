@@ -9,7 +9,7 @@
 
 ## About this fork
 
-This fork fixes Kitsu library synchronization:
+This fork fixes Kitsu library synchronization (work done with Hermes Agent):
 
 - Token POST/refresh now sends the User-Agent header — fixes Cloudflare returning 403 challenge so login succeeds and access/refresh tokens are stored.
 - Pagination offset keys are decoded — Kitsu's page[offset] links are read correctly, so sync continues past page 1 instead of stopping.
