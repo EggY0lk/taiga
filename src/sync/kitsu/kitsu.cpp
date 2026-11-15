@@ -42,7 +42,7 @@ namespace sync::kitsu {
 
 namespace {
 
-constexpr int kLibraryPageLimit = 500;
+constexpr int kLibraryPageLimit = 20;
 
 // Kitsu's JSON:API configuration sets a maximum page size of 20 on this resource. Asking for
 // more results returns an error: "Limit exceeds maximum page size of 20."
