@@ -42,4 +42,6 @@ Taiga is licensed under [GNU General Public License v3](https://www.gnu.org/lice
 
 ## Credits
 
-Fork fixes and progress bar controls implemented with **Hermes Agent** (Nous Research), using **OpenCode CLI**, powered by **nvidia/nemotron-3.5-super-vl-120b-a12b** (provider: NVIDIA).
+**Original app:** Taiga is developed by Eren Gökçe (erengy) and contributors. Source: https://github.com/erengy/taiga
+
+**Fork fixes:** Kitsu library synchronization fixes and progress bar hover controls implemented with **Hermes Agent** (Nous Research), using **OpenCode CLI**, powered by **nvidia/nemotron-3.5-super-vl-120b-a12b** (provider: NVIDIA).
