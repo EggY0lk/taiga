@@ -20,8 +20,10 @@
 
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QRestReply>
 #include <QUrl>
 #include <QUrlQuery>
+#include <algorithm>
 #include <format>
 
 #include "base/string.hpp"
@@ -32,6 +34,17 @@
 #include "sync/search_params.hpp"
 
 namespace sync::kitsu {
+
+bool isTransientError(const QRestReply& reply) {
+  if (reply.hasError()) return true;
+
+  const auto status = reply.httpStatus();
+  return status == 403 || status == 408 || status == 429 || status >= 500;
+}
+
+int retryDelay(const int attempt) {
+  return kRetryBaseDelayMs * (1 << std::min(attempt, 4));
+}
 
 QString fromSearchParams(const SearchParams& params) {
   // Text search already returns results in relevance order.
@@ -163,13 +176,19 @@ QJsonObject buildLibraryEntryObject(const anime::list::Entry& entry,
 }
 
 std::optional<int> pagingOffset(const QJsonObject& links, const QString& key) {
+  // `QUrlQuery(QUrl)` keeps percent-encoded keys (e.g. `page%5Boffset%5D`) encoded, so the query
+  // items are requested in fully decoded form instead.
   const QUrlQuery query{QUrl{links[key].toString()}};
 
-  if (!query.hasQueryItem(u"page[offset]"_s)) return std::nullopt;
+  for (const auto& [name, value] : query.queryItems(QUrl::FullyDecoded)) {
+    if (name == u"page[offset]"_s) {
+      bool ok = false;
+      const auto offset = value.toInt(&ok);
+      return ok ? std::make_optional(offset) : std::nullopt;
+    }
+  }
 
-  bool ok = false;
-  const auto offset = query.queryItemValue(u"page[offset]"_s).toInt(&ok);
-  return ok ? std::make_optional(offset) : std::nullopt;
+  return std::nullopt;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

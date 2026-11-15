@@ -18,12 +18,15 @@
 
 #include "kitsu.hpp"
 
+#include <QDebug>
 #include <QHttpHeaders>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QRestReply>
+#include <QTimer>
 #include <QUrlQuery>
 #include <ranges>
 
@@ -42,7 +45,7 @@ namespace sync::kitsu {
 
 namespace {
 
-constexpr int kLibraryPageLimit = 20;
+constexpr int kLibraryPageLimit = 100;
 
 // Kitsu's JSON:API configuration sets a maximum page size of 20 on this resource. Asking for
 // more results returns an error: "Limit exceeds maximum page size of 20."
@@ -109,11 +112,11 @@ void Service::fetchAnime(const int id) {
   manager_.get(api_.createRequest(u"/anime/%1"_s.arg(id), query), this, callback);
 }
 
-void Service::fetchListEntries(const int offset, QSet<int> fetchedIds) {
+void Service::fetchListEntries(const int offset, QSet<int> fetchedIds, const int attempt) {
   // Library entries are filtered by numeric user ID rather than username, so it must be
   // resolved first.
   if (taiga::accounts.kitsuUserId().empty()) {
-    resolveUser([this, offset, fetchedIds] { fetchListEntries(offset, fetchedIds); });
+    resolveUser([this, offset, fetchedIds, attempt] { fetchListEntries(offset, fetchedIds, attempt); });
     return;
   }
 
@@ -127,12 +130,27 @@ void Service::fetchListEntries(const int offset, QSet<int> fetchedIds) {
       {"fields[libraryEntries]", libraryEntryFields()},
   }};
 
-  const auto callback = [this, offset, fetchedIds](QRestReply& reply) mutable {
+  const auto callback = [this, offset, fetchedIds, attempt](QRestReply& reply) mutable {
     if (isError(reply)) {
       if (retryOnTokenExpiry(
-              reply, [this, offset, fetchedIds] { fetchListEntries(offset, fetchedIds); })) {
+              reply, [this, offset, fetchedIds, attempt] {
+                fetchListEntries(offset, fetchedIds, attempt);
+              })) {
         return;
       }
+
+      if (attempt < kMaxRetries && isTransientError(reply)) {
+        const auto delay = retryDelay(attempt);
+        qWarning() << tagMessage(id(), u"Library page at offset %1 failed (HTTP %2), retrying in %3 ms"_s
+                                            .arg(offset)
+                                            .arg(reply.httpStatus())
+                                            .arg(delay));
+        QTimer::singleShot(delay, this, [this, offset, fetchedIds, attempt] {
+          fetchListEntries(offset, fetchedIds, attempt + 1);
+        });
+        return;
+      }
+
       handleError(*this, reply);
       return;
     }
@@ -165,9 +183,23 @@ void Service::fetchListEntries(const int offset, QSet<int> fetchedIds) {
     anime::db.updateEntries(entries);
 
     if (const auto nextOffset = pagingOffset(root["links"].toObject(), u"next"_s)) {
-      fetchListEntries(*nextOffset, fetchedIds);
+      QTimer::singleShot(kPageDelayMs, this, [this, next = *nextOffset, fetchedIds] {
+        fetchListEntries(next, fetchedIds);
+      });
     } else {
-      sync::pruneMissingEntries(fetchedIds);
+      // Only prune when the response looks complete. A truncated or partial fetch (for example
+      // after a transient error) would otherwise delete entries that were simply not fetched.
+      const auto expectedCount = root["meta"].toObject()["count"].toInt();
+      const auto receivedCount = offset + root["data"].toArray().size();
+
+      if (expectedCount > 0 && receivedCount < expectedCount) {
+        qWarning() << tagMessage(id(), u"Fetched %1 of %2 list entries; keeping local data intact"_s
+                                            .arg(receivedCount)
+                                            .arg(expectedCount));
+      } else {
+        sync::pruneMissingEntries(fetchedIds);
+      }
+
       emit listEntriesFetched();
     }
   };

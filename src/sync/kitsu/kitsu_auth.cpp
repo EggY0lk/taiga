@@ -16,11 +16,13 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <QDebug>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkRequest>
 #include <QRestReply>
+#include <QTimer>
 #include <QUrlQuery>
 
 #include "base/string.hpp"
@@ -32,6 +34,20 @@
 
 namespace sync::kitsu {
 
+namespace {
+
+// kitsu.app sits behind Cloudflare, which answers requests without a User-Agent header with a
+// 403 challenge page. Unlike API requests made through `api_` (which carry the common headers),
+// the token requests are built from scratch, so the headers have to be applied explicitly here.
+QNetworkRequest tokenRequest() {
+  QNetworkRequest request{QUrl{kTokenUrl}};
+  request.setHeaders(taiga::NetworkAccessManager::commonHeaders());
+  request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
+  return request;
+}
+
+}  // namespace
+
 bool Service::retryOnTokenExpiry(QRestReply& reply, std::function<void()> retry) {
   if (!isTokenExpired(reply)) return false;
   refreshAccessToken(std::move(retry));
@@ -39,8 +55,11 @@ bool Service::retryOnTokenExpiry(QRestReply& reply, std::function<void()> retry)
 }
 
 void Service::authenticateUser() {
-  QNetworkRequest request{QUrl{kTokenUrl}};
-  request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
+  authenticateUser(0);
+}
+
+void Service::authenticateUser(const int attempt) {
+  auto request = tokenRequest();
 
   auto username = taiga::accounts.kitsuEmail();
   if (username.empty()) username = taiga::accounts.kitsuUsername();
@@ -55,8 +74,17 @@ void Service::authenticateUser() {
       {"client_secret", kClientSecret},
   };
 
-  const auto callback = [this](QRestReply& reply) {
+  const auto callback = [this, attempt](QRestReply& reply) {
     if (isError(reply)) {
+      if (attempt < kMaxRetries && isTransientError(reply)) {
+        const auto delay = retryDelay(attempt);
+        qWarning() << tagMessage(id(), u"Authentication request failed (HTTP %1), retrying in %2 ms"_s
+                                            .arg(reply.httpStatus())
+                                            .arg(delay));
+        QTimer::singleShot(delay, this, [this, attempt] { authenticateUser(attempt + 1); });
+        return;
+      }
+
       handleError(*this, reply);
       emit authenticationCompleted(false);
       return;
@@ -83,7 +111,7 @@ void Service::authenticateUser() {
   manager_.post(request, taiga::formUrlEncode(body), this, callback);
 }
 
-void Service::refreshAccessToken(std::function<void()> onSuccess) {
+void Service::refreshAccessToken(std::function<void()> onSuccess, const int attempt) {
   const auto refreshToken = taiga::accounts.kitsuRefreshToken();
 
   if (refreshToken.empty()) {
@@ -92,8 +120,7 @@ void Service::refreshAccessToken(std::function<void()> onSuccess) {
     return;
   }
 
-  QNetworkRequest request{QUrl{kTokenUrl}};
-  request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
+  auto request = tokenRequest();
 
   const taiga::NameValuePairs body{
       {"grant_type", "refresh_token"},
@@ -102,8 +129,19 @@ void Service::refreshAccessToken(std::function<void()> onSuccess) {
       {"client_secret", kClientSecret},
   };
 
-  const auto callback = [this, onSuccess](QRestReply& reply) {
+  const auto callback = [this, onSuccess, attempt](QRestReply& reply) {
     if (isError(reply)) {
+      if (attempt < kMaxRetries && isTransientError(reply)) {
+        const auto delay = retryDelay(attempt);
+        qWarning() << tagMessage(id(), u"Token refresh failed (HTTP %1), retrying in %2 ms"_s
+                                            .arg(reply.httpStatus())
+                                            .arg(delay));
+        QTimer::singleShot(delay, this, [this, onSuccess, attempt] {
+          refreshAccessToken(onSuccess, attempt + 1);
+        });
+        return;
+      }
+
       handleError(*this, reply);
       emit authenticationCompleted(false);
       return;
@@ -130,7 +168,7 @@ void Service::refreshAccessToken(std::function<void()> onSuccess) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Service::resolveUser(std::function<void()> onSuccess) {
+void Service::resolveUser(std::function<void()> onSuccess, const int attempt) {
   const bool authenticated = !taiga::accounts.kitsuAccessToken().empty();
 
   QUrlQuery query =
@@ -139,9 +177,20 @@ void Service::resolveUser(std::function<void()> onSuccess) {
           : QUrlQuery{{u"filter[slug]"_s, QString::fromStdString(taiga::accounts.kitsuUsername())}};
   query.addQueryItem(u"fields[users]"_s, userFields());
 
-  const auto callback = [this, authenticated, onSuccess](QRestReply& reply) {
+  const auto callback = [this, authenticated, onSuccess, attempt](QRestReply& reply) {
     if (isError(reply)) {
       if (retryOnTokenExpiry(reply, [this, onSuccess] { resolveUser(onSuccess); })) return;
+
+      if (attempt < kMaxRetries && isTransientError(reply)) {
+        const auto delay = retryDelay(attempt);
+        qWarning() << tagMessage(id(), u"User lookup failed (HTTP %1), retrying in %2 ms"_s
+                                            .arg(reply.httpStatus())
+                                            .arg(delay));
+        QTimer::singleShot(delay, this,
+                           [this, onSuccess, attempt] { resolveUser(onSuccess, attempt + 1); });
+        return;
+      }
+
       handleError(*this, reply);
       if (authenticated) emit authenticationCompleted(false);
       return;

@@ -58,7 +58,7 @@ QNetworkProxy buildProxy() {
 
 NetworkAccessManager::NetworkAccessManager(QObject* parent) : QNetworkAccessManager{parent} {
   setAutoDeleteReplies(true);
-  setTransferTimeout(std::chrono::seconds{10});
+  setTransferTimeout(std::chrono::seconds{60});
 
   if (const auto proxy = buildProxy(); proxy.type() != QNetworkProxy::DefaultProxy) {
     setProxy(proxy);
@@ -102,7 +102,9 @@ bool isDdosProtectionActive(const QRestReply& reply) {
 
   switch (reply.httpStatus()) {
     case 403:
-      return server.startsWith("ddos-guard");
+      // Cloudflare answers automated requests with a "Just a moment..." challenge.
+      return server.startsWith("ddos-guard") ||
+             reply.networkReply()->rawHeader("cf-mitigated") == "challenge";
     case 429:
     case 503:
       return server.startsWith("cloudflare");
