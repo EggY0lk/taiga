@@ -39,3 +39,7 @@ Hover over a progress bar cell in the anime list or cards view to reveal `+` / `
 ## License
 
 Taiga is licensed under [GNU General Public License v3](https://www.gnu.org/licenses/gpl-3.0.html).
+
+## Credits
+
+Fork fixes and progress bar controls implemented with **Hermes Agent** (Nous Research), using **OpenCode CLI**, powered by **nvidia/nemotron-3.5-super-vl-120b-a12b** (provider: NVIDIA).
