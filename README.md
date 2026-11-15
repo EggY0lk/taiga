@@ -7,6 +7,18 @@
 
 [Taiga](https://taiga.moe) is an open-source desktop application for Windows. It automatically detects the anime videos you watch on your computer and synchronizes your progress with [AniList](https://anilist.co), [Kitsu](https://kitsu.app) or [MyAnimeList](https://myanimelist.net). It helps you manage your anime library, discover new series, share watched episodes and download new ones.
 
+## About this fork
+
+This fork fixes Kitsu library synchronization:
+
+- Token POST/refresh now sends the User-Agent header — fixes Cloudflare returning 403 challenge so login succeeds and access/refresh tokens are stored.
+- Pagination offset keys are decoded — Kitsu's page[offset] links are read correctly, so sync continues past page 1 instead of stopping.
+- Page size raised to 100 with retry/backoff on Cloudflare 403/429 and timeouts, 150 ms pacing between pages, and a prune guard so an incomplete fetch cannot delete local library data.
+- Network layer recognizes Cloudflare challenges for clearer errors.
+
+Verified: sync completes error-free; anime_list and anime tables grew from 100 to 655 rows each, entries span 2021–2026, and 505 completed entries match the Kitsu library.
+
+
 ## Links
 
 - [Changelog](https://github.com/erengy/taiga/wiki/Changelog)
