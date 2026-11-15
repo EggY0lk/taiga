@@ -16,7 +16,7 @@ This fork fixes Kitsu library synchronization (work done with Hermes Agent):
 - Page size raised to 100 with retry/backoff on Cloudflare 403/429 and timeouts, 150 ms pacing between pages, and a prune guard so an incomplete fetch cannot delete local library data.
 - Network layer recognizes Cloudflare challenges for clearer errors.
 
-Verified: sync completes error-free; anime_list and anime tables grew from 100 to 655 rows each, entries span 2021–2026, and 505 completed entries match the Kitsu library.
+Progress bar hover controls implemented with OpenCode.
 
 
 ## Links
