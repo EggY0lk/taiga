@@ -25,6 +25,7 @@
 #include "base/string.hpp"
 #include "gui/models/anime_list_model.hpp"
 #include "gui/utils/format.hpp"
+#include "gui/utils/painter_state_saver.hpp"
 #include "gui/utils/theme.hpp"
 #include "media/anime.hpp"
 #include "media/anime_list.hpp"
@@ -42,6 +43,18 @@ void paintEmptyListText(QAbstractScrollArea* area, const QString& text) {
   }());
 
   painter.drawText(area->viewport()->rect(), Qt::AlignCenter, text);
+}
+
+QRect progressBarMinusRect(const QRect& barRect) {
+  const int size = std::min(16, barRect.height());
+  const int y = barRect.center().y() - size / 2;
+  return QRect(barRect.left() + 2, y, size, size);
+}
+
+QRect progressBarPlusRect(const QRect& barRect) {
+  const int size = std::min(16, barRect.height());
+  const int y = barRect.center().y() - size / 2;
+  return QRect(barRect.right() - size - 2, y, size, size);
 }
 
 void paintProgressBar(QPainter* painter, const QStyleOption& option, const Anime* anime,
@@ -72,6 +85,28 @@ void paintProgressBar(QPainter* painter, const QStyleOption& option, const Anime
 
   static const auto proxyStyle{new QProxyStyle{"fusion"}};
   proxyStyle->drawControl(QStyle::CE_ProgressBar, &styleOption, painter);
+
+  // Hover controls
+  if (option.state & QStyle::State_MouseOver) {
+    const PainterStateSaver saver(painter);
+
+    const auto drawControl = [&](const QRect& rect, const QString& glyph) {
+      painter->setRenderHint(QPainter::Antialiasing, true);
+      painter->setPen(Qt::NoPen);
+      painter->setBrush(QColor(0, 0, 0, 120));
+      painter->drawRoundedRect(rect, 4, 4);
+
+      auto font = painter->font();
+      font.setBold(true);
+      font.setPointSize(std::max(8, rect.height() - 4));
+      painter->setFont(font);
+      painter->setPen(Qt::white);
+      painter->drawText(rect, Qt::AlignCenter, glyph);
+    };
+
+    drawControl(progressBarMinusRect(option.rect), QStringLiteral("-"));
+    drawControl(progressBarPlusRect(option.rect), QStringLiteral("+"));
+  }
 }
 
 void paintSpinner(QPainter* painter, const QPixmap& pixmap, const QPointF& center, qreal angle) {

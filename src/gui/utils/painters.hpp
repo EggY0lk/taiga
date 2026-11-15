@@ -22,6 +22,7 @@
 #include <QPixmap>
 #include <QPointF>
 #include <QString>
+#include <QRect>
 #include <QStyleOption>
 
 namespace anime {
@@ -41,6 +42,10 @@ void paintEmptyListText(QAbstractScrollArea* widget, const QString& text);
 
 void paintProgressBar(QPainter* painter, const QStyleOption& option, const anime::Details* anime,
                       const anime::list::Entry* entry);
+
+// Returns the rectangles used for the hover +/- controls of a progress bar.
+QRect progressBarMinusRect(const QRect& barRect);
+QRect progressBarPlusRect(const QRect& barRect);
 
 // Draws `pixmap` rotated by `angle` degrees around `center`.
 void paintSpinner(QPainter* painter, const QPixmap& pixmap, const QPointF& center, qreal angle);

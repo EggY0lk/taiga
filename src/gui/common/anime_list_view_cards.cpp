@@ -38,6 +38,9 @@ ListViewCards::ListViewCards(QWidget* parent, AnimeListModel* model,
 
   setItemDelegate(new ListItemDelegateCards(this));
 
+  setMouseTracking(true);
+  viewport()->setMouseTracking(true);
+
   setViewMode(QListView::ViewMode::IconMode);
   setResizeMode(QListView::ResizeMode::Adjust);
   setSpacing(16);
