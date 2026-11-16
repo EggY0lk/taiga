@@ -92,7 +92,7 @@ void Service::authenticateUser() {
   manager_.post(request, taiga::formUrlEncode(body), this, callback);
 }
 
-void Service::refreshAccessToken(const std::function<void()>& onSuccess) {
+void Service::refreshAccessToken(const std::function<void()>& onSuccess, const int /*attempt*/) {
   const auto refreshToken = taiga::accounts()->kitsuRefreshToken();
 
   if (refreshToken.empty()) {
@@ -138,7 +138,7 @@ void Service::refreshAccessToken(const std::function<void()>& onSuccess) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Service::resolveUser(const std::function<void()>& onSuccess) {
+void Service::resolveUser(const std::function<void()>& onSuccess, const int /*attempt*/) {
   const bool authenticated = !taiga::accounts()->kitsuAccessToken().empty();
 
   QUrlQuery query = authenticated

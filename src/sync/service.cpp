@@ -180,8 +180,8 @@ bool synchronize() {
     // Authenticate first if we have credentials (needed to obtain an access token),
     // otherwise try unauthenticated fetch (limited to public data).
     if (currentServiceId() == ServiceId::Kitsu &&
-        !taiga::accounts.kitsuEmail().empty() &&
-        !taiga::accounts.kitsuPassword().empty()) {
+        !taiga::accounts()->kitsuEmail().empty() &&
+        !taiga::accounts()->kitsuPassword().empty()) {
       authenticateUser();
       return true;
     }

@@ -123,7 +123,7 @@ bool ListItemDelegate::editorEvent(QEvent* event, QAbstractItemModel* model, con
     return QStyledItemDelegate::editorEvent(event, model, option, index);
   }
 
-  if (index.column() != AnimeListModel::COLUMN_PROGRESS) {
+  if (index.column() != AnimeListModel::ColumnProgress) {
     return QStyledItemDelegate::editorEvent(event, model, option, index);
   }
 
@@ -148,12 +148,12 @@ bool ListItemDelegate::editorEvent(QEvent* event, QAbstractItemModel* model, con
 
   const auto entryPtr =
       index.data(static_cast<int>(AnimeListItemDataRole::ListEntry)).value<const ListEntry*>();
-  ListEntry updated = entryPtr ? *entryPtr : ListEntry{.anime_id = anime->id};
+  ListEntry updated = entryPtr ? *entryPtr : ListEntry{.animeId = anime->id};
 
-  const int maxEpisodes = anime->episode_count > 0 ? anime->episode_count
-                                                   : std::numeric_limits<int>::max();
-  updated.watched_episodes =
-      std::clamp(updated.watched_episodes + delta, 0, maxEpisodes);
+  const int maxEpisodes = anime->episodeCount > 0 ? anime->episodeCount
+                                                  : std::numeric_limits<int>::max();
+  updated.watchedEpisodes =
+      std::clamp(updated.watchedEpisodes + delta, 0, maxEpisodes);
 
   anime::list::save(updated);
   return true;

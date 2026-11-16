@@ -111,7 +111,7 @@ void Service::fetchAnime(const int id) {
 void Service::fetchListEntries(const int offset, QSet<int> fetchedIds, const int attempt) {
   // Library entries are filtered by numeric user ID rather than username, so it must be
   // resolved first.
-  if (taiga::accounts.kitsuUserId().empty()) {
+  if (taiga::accounts()->kitsuUserId().empty()) {
     resolveUser([this, offset, fetchedIds, attempt] { fetchListEntries(offset, fetchedIds, attempt); });
     return;
   }
@@ -359,7 +359,7 @@ void Service::deleteListEntry(const int id) {
     sync::queue()->complete(true);
   };
 
-  manager_.deleteResource(createRequest(u"/library-entries/%1"_s.arg(listEntry->id)), this,
+  manager_.deleteResource(createRequest(u"/library-entries/%1"_s.arg(listEntry->id), QUrlQuery{}), this,
                           callback);
 }
 

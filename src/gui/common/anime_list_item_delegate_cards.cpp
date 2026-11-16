@@ -265,7 +265,7 @@ bool ListItemDelegateCards::editorEvent(QEvent* event, QAbstractItemModel* model
   // Reconstruct the progress bar rect as in paint().
   QRect rect = option.rect;
   QRect barRect = rect;
-  barRect.setWidth(posterWidth);
+  barRect.setWidth(kPosterWidth);
   barRect.setTop(barRect.bottom() - 28);
   barRect.adjust(4, 4, -4, -4);
 
@@ -279,10 +279,10 @@ bool ListItemDelegateCards::editorEvent(QEvent* event, QAbstractItemModel* model
     return QStyledItemDelegate::editorEvent(event, model, option, index);
   }
 
-  ListEntry updated = entryPtr ? *entryPtr : ListEntry{.anime_id = item->id};
-  const int maxEpisodes = item->episode_count > 0 ? item->episode_count
-                                                   : std::numeric_limits<int>::max();
-  updated.watched_episodes = std::clamp(updated.watched_episodes + delta, 0, maxEpisodes);
+  ListEntry updated = entryPtr ? *entryPtr : ListEntry{.animeId = item->id};
+  const int maxEpisodes = item->episodeCount > 0 ? item->episodeCount
+                                                 : std::numeric_limits<int>::max();
+  updated.watchedEpisodes = std::clamp(updated.watchedEpisodes + delta, 0, maxEpisodes);
 
   anime::list::save(updated);
   return true;
