@@ -37,6 +37,9 @@ ListView::ListView(QWidget* parent, AnimeListModel* model, AnimeListProxyModel* 
   setObjectName("animeList");
   setProperty("themed", true);
 
+  setMouseTracking(true);
+  viewport()->setMouseTracking(true);
+
   setFrameShape(QFrame::Shape::NoFrame);
 
   setAlternatingRowColors(true);

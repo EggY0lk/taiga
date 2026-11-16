@@ -19,9 +19,12 @@
 #include "anime_list_item_delegate.hpp"
 
 #include <QComboBox>
+#include <QEvent>
 #include <QHeaderView>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QTreeView>
+#include <limits>
 
 #include "gui/models/anime_list_model.hpp"
 #include "gui/utils/painter_state_saver.hpp"
@@ -30,6 +33,7 @@
 #include "gui/utils/theme.hpp"
 #include "media/anime.hpp"
 #include "media/anime_list.hpp"
+#include "media/anime_list_utils.hpp"
 
 namespace gui {
 
@@ -106,6 +110,53 @@ void ListItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
   }
 
   QStyledItemDelegate::paint(painter, option, index);
+}
+
+bool ListItemDelegate::editorEvent(QEvent* event, QAbstractItemModel* model, const QStyleOptionViewItem& option,
+                                   const QModelIndex& index) {
+  if (event->type() != QEvent::MouseButtonRelease) {
+    return QStyledItemDelegate::editorEvent(event, model, option, index);
+  }
+
+  auto* mouseEvent = static_cast<QMouseEvent*>(event);
+  if (mouseEvent->button() != Qt::MouseButton::LeftButton) {
+    return QStyledItemDelegate::editorEvent(event, model, option, index);
+  }
+
+  if (index.column() != AnimeListModel::COLUMN_PROGRESS) {
+    return QStyledItemDelegate::editorEvent(event, model, option, index);
+  }
+
+  const auto anime =
+      index.data(static_cast<int>(AnimeListItemDataRole::Anime)).value<const Anime*>();
+  if (!anime) {
+    return QStyledItemDelegate::editorEvent(event, model, option, index);
+  }
+
+  QRect barRect = option.rect;
+  barRect.adjust(2, 2, -2, -2);
+
+  const QPoint pos = mouseEvent->pos();
+  int delta = 0;
+  if (progressBarMinusRect(barRect).contains(pos)) {
+    delta = -1;
+  } else if (progressBarPlusRect(barRect).contains(pos)) {
+    delta = +1;
+  } else {
+    return QStyledItemDelegate::editorEvent(event, model, option, index);
+  }
+
+  const auto entryPtr =
+      index.data(static_cast<int>(AnimeListItemDataRole::ListEntry)).value<const ListEntry*>();
+  ListEntry updated = entryPtr ? *entryPtr : ListEntry{.anime_id = anime->id};
+
+  const int maxEpisodes = anime->episode_count > 0 ? anime->episode_count
+                                                   : std::numeric_limits<int>::max();
+  updated.watched_episodes =
+      std::clamp(updated.watched_episodes + delta, 0, maxEpisodes);
+
+  anime::list::save(updated);
+  return true;
 }
 
 QSize ListItemDelegate::sizeHint(const QStyleOptionViewItem& option,

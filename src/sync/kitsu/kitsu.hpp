@@ -61,17 +61,17 @@ public:
 
   void authenticateUser();
   void fetchAnime(const int id);
-  void fetchListEntries(const int offset = 0, QSet<int> fetchedIds = {});
+  void fetchListEntries(const int offset = 0, QSet<int> fetchedIds = {}, const int attempt = 0);
   void search(const SearchParams& params, const int offset = 0);
   void addListEntry(const int id, const anime::list::Fields dirty);
   void updateListEntry(const int id, const anime::list::Fields dirty);
   void deleteListEntry(const int id);
 
 private:
-  QNetworkRequest createRequest(const QString& path, const QUrlQuery& query = {});
-  void resolveUser(const std::function<void()>& onSuccess = nullptr);
-  void refreshAccessToken(const std::function<void()>& onSuccess);
-  bool retryOnTokenExpiry(QRestReply& reply, const std::function<void()>& retry);
+  void authenticateUser(const int attempt);
+  void resolveUser(std::function<void()> onSuccess = nullptr, const int attempt = 0);
+  void refreshAccessToken(std::function<void()> onSuccess, const int attempt = 0);
+  bool retryOnTokenExpiry(QRestReply& reply, std::function<void()> retry);
 };
 
 }  // namespace sync::kitsu

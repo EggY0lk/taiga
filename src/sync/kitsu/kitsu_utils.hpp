@@ -25,6 +25,7 @@
 #include "media/anime_list.hpp"
 
 class QJsonObject;
+class QRestReply;
 
 namespace anime {
 enum class SeasonName;
@@ -37,6 +38,18 @@ struct SearchParams;
 }
 
 namespace sync::kitsu {
+
+// Cloudflare sits in front of kitsu.app and occasionally answers with a 403 challenge, a 429
+// rate limit, or a timeout instead of the expected response. These are transient, so requests
+// are retried with a growing delay rather than ending the whole synchronization.
+inline constexpr int kMaxRetries = 5;
+inline constexpr int kRetryBaseDelayMs = 1500;
+
+// A short pause between library pages keeps Kitsu's rate limiter happy.
+inline constexpr int kPageDelayMs = 150;
+
+bool isTransientError(const QRestReply& reply);
+int retryDelay(const int attempt);
 
 QString fromSearchParams(const SearchParams& params);
 QString fromSeasonName(const anime::SeasonName name);
