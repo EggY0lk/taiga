@@ -36,6 +36,18 @@ Progress bar hover controls implemented with OpenCode.
 
 Hover over a progress bar cell in the anime list or cards view to reveal `+` / `-` icons. Clicking `+` increments watched episodes by 1; clicking `-` decrements by 1 (clamped to 0–episode count). The change is saved and reflected in the UI immediately. No icons are shown when not hovered.
 
+## Development methodology
+
+This fork applies the **trust-pyramid workflow** (the "Lauren Method") from [Lauren Tan (poteto)](https://x.com/poteto) at [SpaceXSI](https://github.com/cursor/plugins/tre...), as presented in her talk "[All Code Is Slop (Except Mine)](https://youtu.be/O_zcc6Xl12g)".
+
+Core principles:
+
+- **Deterministic guardrails over prose rules** — lint rules, type constraints, and directory structure replace markdown docs and comments as the source of truth for what agents (and humans) can do.
+- **Verification-first** — every change ships with a verification artifact (tests, runtime proof) rather than relying on human line-by-line review.
+- **Self-correction** — when a bug is found, fix the code *and* update the lint rule or test suite so that anti-pattern cannot be reintroduced.
+
+See `AGENTS.md` for the C/C++ clang-tidy linting workflow derived from these principles.
+
 ## License
 
 Taiga is licensed under [GNU General Public License v3](https://www.gnu.org/licenses/gpl-3.0.html).
@@ -45,3 +57,5 @@ Taiga is licensed under [GNU General Public License v3](https://www.gnu.org/lice
 **Original app:** Taiga is developed by Eren Gökçe (erengy) and contributors. Source: https://github.com/erengy/taiga
 
 **Fork fixes:** Kitsu library synchronization fixes and progress bar hover controls implemented directly with Hermes Agent (Nous Research), powered by **nvidia/nemotron-3.5-super-vl-120b-a12b** (provider: NVIDIA).
+
+**Methodology:** The trust-pyramid workflow and clang-tidy linting rules are based on Lauren Tan (poteto)'s "All Code Is Slop (Except Mine)" talk at SpaceXSI. Credit to Lauren Tan for the trust-pyramid, deterministic-guardrails-over-prose, and verification-first development approach.
