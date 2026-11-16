@@ -2,9 +2,9 @@
 
 This is an open-source desktop anime tracking application (C++, Qt 6, C++23). It syncs watch progress with AniList, Kitsu, and MyAnimeList.
 
-## The Lauren Method comes first
+## Poteto mode comes first
 
-Before any code change, apply the trust-pyramid-workflow: deterministic guardrails over prose, verify before ship. Fix the codebase first, then automate. Never scale slop.
+Before any code change, apply poteto-mode: deterministic guardrails over prose, verify before ship. Fix the codebase first, then automate. Never scale slop. See https://github.com/cursor/plugins/blob/main/pstack/skills/poteto-mode/SKILL.md for the official poteto-mode skill from Lauren Tan (poteto) / SpaceXSI.
 
 ## C/C++ Linting with clang-tidy
 
