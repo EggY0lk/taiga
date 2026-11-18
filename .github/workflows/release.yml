@@ -1,0 +1,59 @@
+name: Release Portable
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up JDK 17 (for CMake/Qt)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install Qt 6.10.3 (MSVC 2022 x64)
+        run: |
+          pip install aqtinstaller
+          aqt install-qt windows desktop 6.10.3 msvc2022_64 --outputdir C:\Qt
+
+      - name: Configure CMake (Release, MSVC x64)
+        env:
+          CMAKE_PREFIX_PATH: C:\Qt\6.10.3\msvc2022_64
+        run: |
+          cmake -S . -B build -G "Ninja Multi-Config" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTAIGA_PORTABLE=ON -DCMAKE_PREFIX_PATH=$env:CMAKE_PREFIX_PATH
+
+      - name: Build Taiga (Release)
+        env:
+          CMAKE_PREFIX_PATH: C:\Qt\6.10.3\msvc2022_64
+        run: |
+          cmake --build build --config RelWithDebInfo --target Taiga
+
+      - name: Make portable (windeployqt)
+        env:
+          CMAKE_PREFIX_PATH: C:\Qt\6.10.3\msvc2022_64
+        run: |
+          & "C:\Qt\6.10.3\msvc2022_64\bin\windeployqt.exe" .\bin\Taiga.exe --release --no-translations --compiler-runtime
+
+      - name: Create Taiga-Portable.zip
+        run: |
+          Compress-Archive -Path bin\* -DestinationPath Taiga-Portable.zip
+
+      - name: Create GitHub release and upload Taiga-Portable.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          gh release create "$TAG" \
+            --title "Taiga Portable $TAG" \
+            --notes "Taiga Portable build from tag $TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            Taiga-Portable.zip
