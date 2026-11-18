@@ -7,31 +7,12 @@ on:
 
 jobs:
   build-and-release:
-    runs-on: windows-latest
+    runs-on: [self-hosted, windows]
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
-
-      - name: Set up JDK 17 (for CMake/Qt)
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Install Qt 6.10.3 (MSVC 2022 x64)
-        shell: pwsh
-        run: |
-          $ProgressPreference = 'SilentlyContinue'
-          Invoke-WebRequest -Uri "https://download.qt.io/official_releases/qt/6.10/6.10.3/submodules/qtbase-windows-msvc2022_64-6.10.3.7z" -OutFile "C:\qtbase.7z"
-          Invoke-WebRequest -Uri "https://download.qt.io/official_releases/qt/6.10/6.10.3/submodules/qtsvg-windows-msvc2022_64-6.10.3.7z" -OutFile "C:\qtsvg.7z"
-          Invoke-WebRequest -Uri "https://download.qt.io/official_releases/qt/6.10/6.10.3/submodules/qtnetworkauth-windows-msvc2022_64-6.10.3.7z" -OutFile "C:\qtnetworkauth.7z"
-          Invoke-WebRequest -Uri "https://download.qt.io/official_releases/qt/6.10/6.10.3/submodules/qtdeclarative-windows-msvc2022_64-6.10.3.7z" -OutFile "C:\qtdeclarative.7z"
-          & "C:\Program Files\7-Zip\7z.exe" x "C:\qtbase.7z" -o"C:\Qt" -y
-          & "C:\Program Files\7-Zip\7z.exe" x "C:\qtsvg.7z" -o"C:\Qt" -y
-          & "C:\Program Files\7-Zip\7z.exe" x "C:\qtnetworkauth.7z" -o"C:\Qt" -y
-          & "C:\Program Files\7-Zip\7z.exe" x "C:\qtdeclarative.7z" -o"C:\Qt" -y
 
       - name: Configure CMake (Release, MSVC x64)
         env:

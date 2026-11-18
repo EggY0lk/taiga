@@ -8,48 +8,27 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: [self-hosted, windows]
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Set up JDK 17 (for CMake/Qt)
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Install Qt 6.10.3 (MSVC 2022 x64)
-        shell: pwsh
-        run: |
-          $ProgressPreference = 'SilentlyContinue'
-          Invoke-WebRequest -Uri "https://download.qt.io/official_releases/qt/6.10/6.10.3/submodules/qtbase-windows-msvc2022_64-6.10.3.7z" -OutFile "C:\qtbase.7z"
-          Invoke-WebRequest -Uri "https://download.qt.io/official_releases/qt/6.10/6.10.3/submodules/qtsvg-windows-msvc2022_64-6.10.3.7z" -OutFile "C:\qtsvg.7z"
-          Invoke-WebRequest -Uri "https://download.qt.io/official_releases/qt/6.10/6.10.3/submodules/qtnetworkauth-windows-msvc2022_64-6.10.3.7z" -OutFile "C:\qtnetworkauth.7z"
-          Invoke-WebRequest -Uri "https://download.qt.io/official_releases/qt/6.10/6.10.3/submodules/qtdeclarative-windows-msvc2022_64-6.10.3.7z" -OutFile "C:\qtdeclarative.7z"
-          & "C:\Program Files\7-Zip\7z.exe" x "C:\qtbase.7z" -o"C:\Qt" -y
-          & "C:\Program Files\7-Zip\7z.exe" x "C:\qtsvg.7z" -o"C:\Qt" -y
-          & "C:\Program Files\7-Zip\7z.exe" x "C:\qtnetworkauth.7z" -o"C:\Qt" -y
-          & "C:\Program Files\7-Zip\7z.exe" x "C:\qtdeclarative.7z" -o"C:\Qt" -y
-
       - name: Configure CMake (Release, MSVC x64)
         env:
-          QT6_DIR: C:\Qt\6.10.3\msvc2022_64
           CMAKE_PREFIX_PATH: C:\Qt\6.10.3\msvc2022_64
         run: |
           cmake -S . -B build -G "Ninja Multi-Config" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTAIGA_PORTABLE=ON -DCMAKE_PREFIX_PATH=$env:CMAKE_PREFIX_PATH
 
       - name: Build Taiga (Release)
         env:
-          QT6_DIR: C:\Qt\6.10.3\msvc2022_64
           CMAKE_PREFIX_PATH: C:\Qt\6.10.3\msvc2022_64
         run: |
           cmake --build build --config RelWithDebInfo --target Taiga
 
       - name: Make portable (windeployqt)
         env:
-          QT6_DIR: C:\Qt\6.10.3\msvc2022_64
+          CMAKE_PREFIX_PATH: C:\Qt\6.10.3\msvc2022_64
         run: |
           & "C:\Qt\6.10.3\msvc2022_64\bin\windeployqt.exe" .\bin\Taiga.exe --release --no-translations --compiler-runtime
 
